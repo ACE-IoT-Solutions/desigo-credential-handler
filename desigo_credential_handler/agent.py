@@ -83,11 +83,11 @@ class DesigoCredentialHandler(Agent):
         """
         Retrieve new token from server
         """
-
-        if datetime.now() - timedelta(minutes=15) < self.last_returned_token:
-            return self.auth_token
-
         with self.token_lock:
+            if datetime.now() - timedelta(minutes=15) < self.last_returned_token:
+                _log.debug(f"returning cached token: ...{self.auth_token[-4:]}")
+                return self.auth_token
+
             try:
                 data = {
                     "grant_type": "password",
@@ -112,12 +112,11 @@ class DesigoCredentialHandler(Agent):
                 _log.error("could not get token, giving up")
                 return None
             try:
-                _log.info(f"acquired access_token: ...{result.json()['access_token'][-5:]}")
+                _log.info(f"acquired new access_token: ...{result.json()['access_token'][-4:]}")
                 self.auth_token = result.json()["access_token"]
             except KeyError:
                 _log.debug(f"could not get access_token from JSON: {result.json()=}")
                 return None
-            _log.debug(f"returning token: ...{self.auth_token[-4:]}")
             self.last_returned_token = datetime.now()
             return self.auth_token
 
