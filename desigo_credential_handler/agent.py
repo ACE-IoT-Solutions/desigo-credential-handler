@@ -4,10 +4,8 @@ Desigo Credential Handler Agent
 This agent is responsible for handling and proxying requests for 
 Desigo API credentials for the VOLTTRON platform driver. 
 
-"""
-# pylint: disable=logging-fstring-interpolation
+"""# pylint: disable=logging-fstring-interpolation
 __docformat__ = 'reStructuredText'
-
 import logging
 import sys
 import traceback
@@ -25,7 +23,7 @@ utils.setup_logging()
 __version__ = "1.0.1"
 
 
-def desigo_credential_handler(_, **kwargs):
+def desigo_credential_handler(**kwargs):
     """
     Parses the Agent configuration and returns an instance of
     the agent created using that configuration.
