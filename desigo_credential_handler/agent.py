@@ -8,6 +8,9 @@ Desigo API credentials for the VOLTTRON platform driver.
 # pylint: disable=logging-fstring-interpolation
 __docformat__ = 'reStructuredText'
 
+import logging
+import sys
+import traceback
 
 from datetime import datetime, timedelta
 
@@ -16,13 +19,13 @@ import grequests
 
 from volttron.platform.agent import utils
 from volttron.platform.vip.agent import Agent, RPC
-from volttron.platform.vip.agent import Agent, RPC
-from volttron.platform.vip.agent import Agent, RPC
-from volttron.platform.vip.agent import Agent, RPC
+
+_log = logging.getLogger(__name__)
+utils.setup_logging()
 __version__ = "1.0.1"
 
 
-def desigo_credential_handler(**kwargs):
+def desigo_credential_handler(_, **kwargs):
     """
     Parses the Agent configuration and returns an instance of
     the agent created using that configuration.
@@ -86,10 +89,10 @@ class DesigoCredentialHandler(Agent):
         Retrieve new token from server
         """
         with self.token_lock:
-            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
-            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
-            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
-            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
+            if datetime.now() - timedelta(seconds=15) < self.last_returned_token:
+                _log.debug(f"returning cached token: ...{self.auth_token[-4:]}")
+                return self.auth_token
+
             try:
                 data = {
                     "grant_type": "password",
@@ -111,9 +114,9 @@ class DesigoCredentialHandler(Agent):
                 self.get_token(url, retry=True)
                 return None
             if result is None and kwargs.get("retry"):
-            if result is None and kwargs.get("retry"):
-            if result is None and kwargs.get("retry"):
-            if result is None and kwargs.get("retry"):
+                _log.error("could not get token, giving up")
+                return None
+            try:
                 _log.info(f"acquired new access_token: ...{result.json()['access_token'][-4:]}")
                 self.auth_token = result.json()["access_token"]
             except KeyError:
