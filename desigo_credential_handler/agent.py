@@ -1,10 +1,13 @@
 """
-Agent documentation goes here.
-"""
+Desigo Credential Handler Agent
 
+This agent is responsible for handling and proxying requests for 
+Desigo API credentials for the VOLTTRON platform driver. 
+
+"""
+# pylint: disable=logging-fstring-interpolation
 __docformat__ = 'reStructuredText'
 
-import http
 import logging
 import sys
 import traceback
@@ -15,14 +18,14 @@ import gevent
 import grequests
 
 from volttron.platform.agent import utils
-from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.vip.agent import Agent, RPC
 
 _log = logging.getLogger(__name__)
 utils.setup_logging()
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
-def desigo_credential_handler(config_path, **kwargs):
+def desigo_credential_handler(_, **kwargs):
     """
     Parses the Agent configuration and returns an instance of
     the agent created using that configuration.
@@ -49,6 +52,7 @@ class DesigoCredentialHandler(Agent):
         self.servers = {}
         self.auth_token = None
         self.token_lock = gevent.lock.BoundedSemaphore()
+        self.token_timeout = 900
         self.last_returned_token = datetime.now() - timedelta(minutes=15)
 
         # Hook self.configure up to changes to the configuration file "config".
@@ -74,6 +78,7 @@ class DesigoCredentialHandler(Agent):
                 except KeyError:
                     _log.warning(f"Invalid server configuration {server}")
                     continue
+            self.token_timeout = contents.get("token_timeout", 900)
         else:
             _log.warning(f"Invalid configuration name {config_name}")
             return
@@ -84,7 +89,7 @@ class DesigoCredentialHandler(Agent):
         Retrieve new token from server
         """
         with self.token_lock:
-            if datetime.now() - timedelta(minutes=15) < self.last_returned_token:
+            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
                 _log.debug(f"returning cached token: ...{self.auth_token[-4:]}")
                 return self.auth_token
 
@@ -108,7 +113,7 @@ class DesigoCredentialHandler(Agent):
                 gevent.sleep(5)
                 self.get_token(url, retry=True)
                 return None
-            elif result is None and kwargs.get("retry"):
+            if result is None and kwargs.get("retry"):
                 _log.error("could not get token, giving up")
                 return None
             try:
@@ -120,30 +125,6 @@ class DesigoCredentialHandler(Agent):
             self.last_returned_token = datetime.now()
             return self.auth_token
 
-    @Core.receiver("onstart")
-    def onstart(self, sender, **kwargs):
-        """
-        This is method is called once the Agent has successfully connected to the platform.
-        This is a good place to setup subscriptions if they are not dynamic or
-        do any other startup activities that require a connection to the message bus.
-        Called after any configurations methods that are called at startup.
-
-        Usually not needed if using the configuration store.
-        """
-        # Example publish to pubsub
-        self.vip.pubsub.publish('pubsub', "some/random/topic", message="HI!")
-
-        # Example RPC call
-        # self.vip.rpc.call("some_agent", "some_method", arg1, arg2)
-        pass
-
-    @Core.receiver("onstop")
-    def onstop(self, sender, **kwargs):
-        """
-        This method is called when the Agent is about to shutdown, but before it disconnects from
-        the message bus.
-        """
-        pass
 
     def _grequests_exception_handler(self, request, exception):
         """
