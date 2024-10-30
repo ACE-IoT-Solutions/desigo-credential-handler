@@ -23,7 +23,7 @@ utils.setup_logging()
 __version__ = "1.0.1"
 
 
-def desigo_credential_handler(**kwargs):
+def desigo_credential_handler(config_path, **kwargs):
     """
     Parses the Agent configuration and returns an instance of
     the agent created using that configuration.
