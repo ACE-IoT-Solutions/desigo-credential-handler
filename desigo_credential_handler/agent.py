@@ -89,7 +89,7 @@ class DesigoCredentialHandler(Agent):
         Retrieve new token from server
         """
         with self.token_lock:
-            if datetime.now() - timedelta(seconds=15) < self.last_returned_token:
+            if datetime.now() - timedelta(seconds=self.token_timeout) < self.last_returned_token:
                 _log.debug(f"returning cached token: ...{self.auth_token[-4:]}")
                 return self.auth_token
 
