@@ -16,10 +16,11 @@ import grequests
 
 from volttron.platform.agent import utils
 from volttron.platform.vip.agent import Agent, Core, RPC
+from volttron.platform.messaging.health import STATUS_BAD, STATUS_GOOD
 
 _log = logging.getLogger(__name__)
 utils.setup_logging()
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def desigo_credential_handler(config_path, **kwargs):
@@ -105,7 +106,9 @@ class DesigoCredentialHandler(Agent):
 
             if result is None and not kwargs.get("retry"):
                 _log.error("could not get token, trying once more in 5 seconds")
+                self.vip.health.set_status(STATUS_BAD)
                 gevent.sleep(5)
+                self.token_lock.release()
                 self.get_token(url, retry=True)
                 return None
             elif result is None and kwargs.get("retry"):
@@ -118,6 +121,7 @@ class DesigoCredentialHandler(Agent):
                 _log.debug(f"could not get access_token from JSON: {result.json()=}")
                 return None
             self.last_returned_token = datetime.now()
+            self.vip.health.set_status(STATUS_GOOD)
             return self.auth_token
 
     @Core.receiver("onstart")
@@ -130,12 +134,6 @@ class DesigoCredentialHandler(Agent):
 
         Usually not needed if using the configuration store.
         """
-        # Example publish to pubsub
-        self.vip.pubsub.publish('pubsub', "some/random/topic", message="HI!")
-
-        # Example RPC call
-        # self.vip.rpc.call("some_agent", "some_method", arg1, arg2)
-        pass
 
     @Core.receiver("onstop")
     def onstop(self, sender, **kwargs):
@@ -143,7 +141,6 @@ class DesigoCredentialHandler(Agent):
         This method is called when the Agent is about to shutdown, but before it disconnects from
         the message bus.
         """
-        pass
 
     def _grequests_exception_handler(self, request, exception):
         """
